@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block head %}
+  	{{ super() }}
+{% endblock %}
+
+{% block content %}
+	<link href="static/css/select2.min.css" rel="stylesheet" />
+	<script src="static/js/select2.min.js"></script>
+
+<form id="viewing" action="" method="POST" enctype="multipart/form-data">
+    {{ form.options(class_="form-control", style="width: 32%;") }}
+    <input type="submit" value="Go">
+</form>
+<script>
+$(document).ready(function() {
+	$('.form-control').select2({
+  placeholder: "Select a file",
+  allowClear: true
+});
+});
+</script>
+{% endblock %}

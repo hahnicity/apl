@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block head %}
+  {{ super() }}
+	<link href="//cdnjs.cloudflare.com/ajax/libs/select2/4.0.0/css/select2.min.css" rel="stylesheet" />
+	<script src="//cdnjs.cloudflare.com/ajax/libs/select2/4.0.0/js/select2.min.js"></script>
+<style type="text/css">
+ul {
+    list-style-type: none;
+    padding:0; margin:0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<p> Delete Annotation Pipeline Files </p>
+
+<form id="delete" action="" method="POST" enctype="multipart/form-data">
+    {{ form.options(class_="form-control", style="width: 32%;") }}
+    <br>
+    <input type="submit" value="Delete">
+</form>
+
+<br>
+<br>
+
+<p> To delete all files</p>
+<form id="clear" action="" method="POST" enctype="multipart/form-data">
+    <input type="submit" value="Clear all files">
+</form>
+
+<br>
+
+<script>
+$(document).ready(function () {
+    $('.form-control').select2({
+  placeholder: "Select multiple files",
+  allowClear: true
+});
+    $('#delete').on('submit', function(e) {
+        e.preventDefault();
+        $.ajax({
+            url : $(this).attr('action'),
+            type: $(this).attr('method'),
+            data: $(this).serialize(),
+            success: function() {
+	        alert("Files have been deleted");
+                window.location.reload(true);
+            }
+        });
+    });
+});
+
+$(document).ready(function () {
+    $('#clear').on('submit', function(e) {
+	if (confirm("Are you sure you want to clear all files?")) {
+        e.preventDefault();
+        $.ajax({
+            url : "/_clear",
+            success: function (data) {
+                alert(data);
+                window.location.reload(true);
+            },
+        });
+	return false;
+        }
+     });
+});
+</script>
+{% endblock %}

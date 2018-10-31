@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block head %}
+  	{{ super() }}
+{% endblock %}
+
+{% block content %}
+	<link href="static/css/select2.min.css" rel="stylesheet" />
+	<script src="static/js/select2.min.js"></script>
+
+<form id="viewing" action="" method="POST" enctype="multipart/form-data">
+    <div class='form-group'>
+        <label for='initial'>Raw Data File</label>
+        {{ form.raw_data_files(class_="form-control", style="width: 32%;") }}
+    </div>
+    <div class='form-group'>
+        <label for='annotations'>Annotation File</label>
+        {{ form.annotations(class_="form-control", style="width: 32%;") }}
+    </div>
+    <input type="submit" value="Go">
+</form>
+<script>
+$(document).ready(function() {
+	$('.form-control').select2({
+  placeholder: "Select a file",
+  allowClear: true
+});
+});
+</script>
+{% endblock %}

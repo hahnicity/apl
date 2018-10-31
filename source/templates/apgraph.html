@@ -1,0 +1,406 @@
+{% extends "base.html" %}
+{% block title %} graph {% endblock %}
+{% block head %}
+{{ super() }}
+    <script src="/static/js/dygraph-interaction.js"></script>
+    <script src="/static/js/dygraph-combined.js"></script>
+{% endblock %}
+{% block style %}
+{{ super() }}
+    .graph{ width: 1200px; height: 600px; }
+    .graph-container { overflow: hidden; }
+    .annotation {
+        font-size: 10px !important;
+    }
+    .backbutton { display: inline; }
+    #div1{ float: left; }
+    #div1 .dygraph-legend {
+        top: 60px;
+        left: 120px !important;
+        z-index: 1 !important;
+        background-color: rgba(255, 255, 255, 0.65) !important;
+    }
+    #zoom-out {
+        display: none;
+        position: absolute;
+        left: 70px;
+        top: 60px;
+        z-index: 20;
+    }
+    .filename-container {
+        text-align: center;
+    }
+    .anno-button {
+        width: 100%;
+        height: 100%;
+    }
+    .time-form {
+        width: 50%;
+        float: left;
+        margin-right: 5%;
+    }
+    .multi-anno-toolbar {
+        float: right;
+    }
+    .metadata-attr {
+        padding-right: 5px;
+    }
+    #div1 div div.norm-ts-anno {
+        z-index: 2 !important;
+        background-color: rgba(255, 255, 255, 0.75);
+    }
+    #div1 div div.dygraphDefaultAnnotation.norm-ts-anno {
+        z-index: 2 !important;
+        background-color: rgba(255, 255, 255, 0.75);
+    }
+    #div1 div div.dygraphDefaultAnnotation.pva-anno {
+        z-index: 3 !important;
+        background-color: rgba(255, 255, 255, 0.75);
+    }
+    #div1 div div ul.dropdown-menu {
+        z-index: 10 !important;
+        min-width: 160px;
+    }
+{% endblock %}
+{% block content %}
+    <div class="filename-container">file is {{filename|basename}}</div>
+    <div class="graph-container">
+        <div id="div1" class="graph"></div>
+    </div>
+    <br>
+        <div class="time-form">
+            <form id="breaths" method="post" action="anno_output/{{filename|basename}}" enctype="multipart/form-data">
+                {{ form.starttime }}
+                {{ form.endtime }}
+                <input type="submit" value="Export Annotations">
+            </form>
+        </div>
+        <iframe id="download" width="1" height="1" style="display:none"></iframe>
+        <iframe id="tv" width="1" height="1" style="display:none"></iframe>
+<script>
+
+var basefile = "{{ filename|safe|basename }};
+var savedAnnos = {{ saved_annotations|safe }}
+var annosToUse = {{ annos_to_perform|safe }}
+var multiAnnosTable = annosToUse.reduce(function(obj, x) {
+    obj[x] = new Set([]);
+    return obj;
+}, {});
+var multiAnnosState = {'lastBN': null, 'lastAnno': null};
+
+function setAnnoBasic(tr, anno) {
+    var td = document.createElement('td');
+    var checkbox = document.createElement("input");
+    checkbox.setAttribute("annoType", anno);
+    checkbox.setAttribute("type", "checkbox");
+    checkbox.setAttribute("class", "anno-type");
+    var label = document.createElement("label");
+    label.style = 'padding-right: 5px';
+    label.appendChild(document.createTextNode(anno));
+    td.appendChild(label);
+    td.appendChild(document.createElement('br'));
+    td.appendChild(checkbox);
+    tr.appendChild(td);
+}
+
+function drawBasicMenu(annos, metadataToUse) {
+    /*
+     * Drop up helper function. All that it does is draws a drop-up table so
+     * we don't always have to compute it dynamically for each and every
+     * breath
+     */
+    var ul = document.createElement("ul");
+    ul.className = "dropdown-menu";
+    ul.style = "background-color:rgba(255, 255, 255, 0.85);"
+    var annoTypeTable = document.createElement('table');
+    annoTypeTable.style = "width: 100%";
+    annoTypeTable.className = "anno-table";
+    var row = document.createElement('tr');
+    for (var j=0; j < annos.length; j++) {
+        setAnnoBasic(row, annos[j]);
+        if (j != 0 && (j+1) % 4 == 0) {
+            annoTypeTable.appendChild(row);
+            var row = document.createElement('tr');
+        }
+    }
+    // ensure only 4 items to a row in anno table
+    if (j != 0 && (j+1) % 4 != 0) {
+        annoTypeTable.appendChild(row);
+    }
+    ul.appendChild(annoTypeTable);
+
+    var divider_li = document.createElement("li");
+    divider_li.className = "divider";
+    divider_li.role = "separator";
+    ul.appendChild(divider_li);
+    var metadataTable = document.createElement('table');
+    metadataTable.className = "metadata-table";
+    for (var k=0; k < metadataToUse.length; k++) {
+        var tr = document.createElement('tr');
+        field = metadataToUse[k];
+        var nameTd = document.createElement('td');
+        var valTd = document.createElement('td');
+        nameTd.className = 'metadata-attr';
+        nameTd.innerHTML = field;
+        valTd.innerHTML = "";
+        valTd.className = 'metadata-val ' + field;
+        tr.appendChild(nameTd);
+        tr.appendChild(valTd);
+        metadataTable.appendChild(tr);
+    }
+    ul.appendChild(metadataTable);
+    return ul;
+}
+
+Array.prototype.remove = function(from, to) {
+  var rest = this.slice((to || from) + 1 || this.length);
+  this.length = from < 0 ? this.length + from : from;
+  return this.push.apply(this, rest);
+};
+
+function updateMultiAnnosTable() {
+    var annosToRm = []
+    for (var i=0; i < savedAnnos.length; i++) {
+        annoBN = savedAnnos[i].split('-')[0];
+        annoType = savedAnnos[i].split('-')[1];
+        if (annosToUse.indexOf(annoType) < 0) {
+            annosToRm.push(i);
+            continue
+        }
+        multiAnnosTable[annoType].add(parseInt(annoBN));
+    }
+    if (annosToRm.length > 0) {
+        var tmp = new Set(savedAnnos);
+        for (var i=0; i < annosToRm.length; i++) {
+            tmp.delete(savedAnnos[annosToRm[i]]);
+        }
+        savedAnnos = Array.from(tmp);
+    }
+}
+updateMultiAnnosTable();
+
+function setUnsetSingleAnno(id) {
+    var elem = document.getElementById(id);
+    var bn = elem.getAttribute("bn")
+    var anno = elem.getAttribute("annoType");
+    // XXX update savedAnnos.
+    // XXX Perform retry somehow if fails??
+    if (elem.checked) {
+        $.ajax({type: "POST", url: "/update_anno/" + basefile + "/" + bn + "/" + anno + "/true"});
+    } else {
+        $.ajax({type: "POST", url: "/update_anno/" + basefile + "/" + bn + "/" + anno + "/false"});
+    }
+}
+
+function setUnsetMultiAnnos(id) {
+    var elem = document.getElementById(id);
+    var bn = parseInt(elem.getAttribute("bn"))
+    var anno = elem.getAttribute("annoType");
+    if (multiAnnosState['lastBN'] == null || multiAnnosState['lastAnno'] != anno) {
+        multiAnnosState['lastBN'] = bn;
+        multiAnnosState['lastAnno'] = anno;
+        if (elem.checked) {
+            multiAnnosTable[anno].add(bn);
+        } else {
+            multiAnnosTable[anno].delete(bn);
+        }
+        submitMultiAnnos();
+    } else if (multiAnnosState['lastAnno'] == anno)  {
+        isChecked = elem.checked
+        if (bn < multiAnnosState['lastBN']) {
+            var firstBN = bn;
+            var secondBN = multiAnnosState['lastBN'];
+        } else {
+            var firstBN = multiAnnosState['lastBN'];
+            var secondBN = bn;
+        }
+        for (i=firstBN; i<=secondBN; i++) {
+            elemId = String(i) + "-" + anno;
+            var elem = document.getElementById(elemId);
+            if (elem != null) {
+                elem.checked = isChecked;
+            }
+            if (isChecked) {
+                multiAnnosTable[anno].add(i);
+            } else {
+                multiAnnosTable[anno].delete(i);
+            }
+        }
+        multiAnnosState['lastBN'] = bn;
+        submitMultiAnnos();
+    }
+}
+
+function submitMultiAnnos() {
+    var tmpMultiAnnosTable = {};
+    for (var key in multiAnnosTable) {
+        tmpMultiAnnosTable[key] = Array.from(multiAnnosTable[key]);
+    }
+    $.ajax({
+        type: "POST",
+        contentType: 'application/json',
+        dataType: 'json',
+        url: "/update_annos/" + basefile,
+        data: JSON.stringify(tmpMultiAnnosTable),
+    });
+}
+
+function renderAnno(anno) {
+    var bn = anno.innerHTML;
+    anno.innerHTML = ""
+    anno.className = anno.className + " dropup";
+    anno.style.overflow = "visible";
+    anno.style.borderColor = "#FFFFFF";
+    anno.style.top = parseFloat(anno.style.top) - 20 + "px";
+    // It's slower to clone the button than to just create it.
+    var button = document.createElement("button");
+    button.className = "btn btn-default dropdown-toggle anno-btn";
+    button.setAttribute("data-toggle", "dropdown");
+    button.innerHTML = bn;
+    anno.appendChild(button);
+}
+
+function setAnnos(table, bn, cached_annos) {
+    var checkboxes = table.getElementsByTagName('input')
+    for (var i=0; i < checkboxes.length; i++) {
+        checkbox = checkboxes[i];
+        async = checkbox.getAttribute('annoType');
+        var id = bn + "-" + async;
+        checkbox.id = id
+        checkbox.setAttribute("bn", bn);
+        {% if anno_type == 'pva' %}
+        checkbox.setAttribute("onclick", "setUnsetSingleAnno('" + id + "')");
+        {% elif anno_type == 'ventmode' %}
+        checkbox.setAttribute("onclick", "setUnsetMultiAnnos('" + id + "')");
+        {% endif %}
+        if (cached_annos.includes(id)) { checkbox.checked = true; }
+    }
+}
+
+function drawCallbackFunc(gs) {
+    var pva_annotations = document.getElementsByClassName("dygraphDefaultAnnotation pva-anno");
+    for (var i=0; i < pva_annotations.length; i++) {
+        pva_annotations[i].style.color = 'red';
+        pva_annotations[i].style.borderColor = 'red';
+    }
+    var annotations = document.getElementsByClassName("dygraphDefaultAnnotation annotation");
+
+    var bns = [];
+    var startBN = 100000;
+    var endBN = 0;
+    for (var i=0; i < annotations.length; i++) {
+        var anno = annotations[i];
+        var bn = parseInt(anno.innerHTML);
+        if (bn < startBN) {
+            startBN = bn;
+        }
+        if (bn > endBN) {
+            endBN = bn;
+        }
+    }
+    {% if anno_type == "pva" %}
+    var cached_annos = savedAnnos;
+    {% elif anno_type == "ventmode" %}
+    var cached_annos = [];
+    for (key in multiAnnosTable) {
+        var bns = Array.from(multiAnnosTable[key]);
+        for (var i=0; i < bns.length; i++) {
+            cached_annos.push(bns[i].toString() + "-" + key);
+        }
+    }
+    {% endif %}
+
+    for (var i=0; i < annotations.length; i++) {
+        var anno = annotations[i];
+        var bn = anno.innerHTML;
+        var aptv_offset = parseInt(bn) - parseInt(first_bn);
+        var bnMetadata = aptv_markers[aptv_offset];
+        renderAnno(anno);
+        var menu = metadataMenuTemplate.cloneNode(true);
+        var annoTable = menu.getElementsByClassName("anno-table")[0];
+        setAnnos(annoTable, bn, cached_annos);
+        var metadataTable = menu.getElementsByClassName("metadata-table")[0];
+        var fieldNameToJsonMap = {
+            "E-time": "e_time",
+            "I-time": "i_time",
+            "Min-Pressure": "min_p",
+            "PEEP": "peep",
+            "Previous-PEEP": "peep_prev",
+            "TVe/TVi": "tv_ratio",
+            "TVe": "tve",
+            "TVi": "tvi",
+        }
+        var vals = metadataTable.getElementsByClassName('metadata-val');
+        for (var k=0; k < vals.length; k++) {
+            // match metadata field with value
+            var val = vals[k];
+            var jsonField = fieldNameToJsonMap[val.className.split(" ")[1]];
+            val.innerText = bnMetadata[jsonField];
+        }
+        anno.appendChild(menu);
+    }
+}
+
+//this is the initiation of the dygraph element
+var blockRedraw = false;
+gs = new Dygraph(
+    document.getElementById("div1"),
+    {{filename|safe}},
+    {
+        {% if "absolute" in timetype|safe|string %}
+        xValueFormatter: Dygraph.dateString_,
+        xAxisLabelFormatter: Dygraph.dateAxisFormatter,
+        xTicker: Dygraph.dateTicker,
+        {% endif %}
+        labelsKMB: true,
+        labels: [ "time", "flow", "pressure", "breath"],
+        labelsSeparateLines: true,
+        colors: ['#2b8cbe','#e34a33'],
+        visibility: [true, true, false],
+        legend: 'always',
+        drawCallback: drawCallbackFunc,
+        labelsDivStyles: { 'textAlign': 'left' },
+        showRangeSelector: true,
+        interactionModel: {
+            mousedown: downV3,
+            mousemove: moveV3,
+            mouseup: upV3,
+            dblclick: dblClickV3,
+            mousewheel: scrollV3
+        },
+        drawXGrid: false,
+        drawYGrid: true
+    });
+
+
+var metadataToUse = {{ metadata_to_use|safe }}
+var metadataMenuTemplate = drawBasicMenu(annosToUse, metadataToUse);
+
+var anno_markers = {{ arr|safe }};
+var aptv_markers = {{ aptv_arr|safe }};
+// There is some weird thing where there is a hanging " on the end
+// of the filename. I've tried to fix it but it's elusive.
+var first_bn = anno_markers[0].shortText
+var sorted_keys = function() {
+    keys = [];
+    for (key in aptv_markers[0]) {
+        keys.push(key);
+    }
+    keys.sort();
+    return keys;
+}();
+// this is how annotations are piped to dygraphs
+gs.setAnnotations(anno_markers);
+//this is where we zoom in
+gs.ready(function () {
+    {% if "absolute" in timetype|safe|string %}
+    var time_offset = 10000;
+    {% else %}
+    var time_offset = 10;
+    {% endif %}
+    gs.updateOptions({
+        dateWindow: [anno_markers[0].x, anno_markers[0].x + time_offset],
+    });
+})
+</script>
+{% endblock %}

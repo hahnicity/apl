@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+{% block head %}
+{% endblock %}
+{% block style %}
+{{ super() }}
+body{
+	margin:0;
+	color:#6a6f8c;
+	background:#fff;
+}
+*,:after,:before{box-sizing:border-box}
+.clearfix:after,.clearfix:before{content:'';display:table}
+.clearfix:after{clear:both;display:block}
+a{color:inherit;text-decoration:none}
+
+.view-wrap{
+	width:100%;
+	margin:auto;
+	max-width:525px;
+	min-height:725px;
+	position:relative;
+	background-size: 800px 800px;
+	box-shadow:0 12px 15px 0 rgba(0,0,0,.24),0 17px 50px 0 rgba(0,0,0,.19);
+}
+.view-html{
+	width:100%;
+	height:100%;
+	position:absolute;
+	padding:20px 50px 50px 50px;
+	background:rgba(40,57,101,.95);
+}
+.view-html .choose-view-htm,
+.view-html .new-view-htm{
+	top:0;
+	left:0;
+	right:0;
+	bottom:0;
+	position:absolute;
+	transform:rotateY(180deg);
+	backface-visibility:hidden;
+	transition:all .4s linear;
+}
+.view-html .choose-view,
+.view-html .new-view,
+.view-form .group .check{
+	display:none;
+}
+.view-html .tab,
+.view-form .group .label,
+.view-form .group .button{
+	text-transform:uppercase;
+}
+.view-html .tab{
+	font-size:22px;
+	margin-right:15px;
+	padding-bottom:5px;
+	margin:0 15px 10px 0;
+	display:inline-block;
+	border-bottom:2px solid transparent;
+}
+.view-html .choose-view:checked + .tab,
+.view-html .new-view:checked + .tab{
+	color:#fff;
+	border-color:#1161ee;
+}
+.view-form{
+	min-height:345px;
+	position:relative;
+	perspective:1000px;
+	transform-style:preserve-3d;
+}
+.view-form .group{
+	margin-bottom:15px;
+}
+.view-form .group .label,
+.view-form .group .input,
+.view-form .group .button{
+	width:100%;
+	color:#fff;
+	display:block;
+}
+.view-form .group .input,
+.view-form .group .button{
+	border:none;
+	padding:15px 20px;
+	border-radius:25px;
+	background:rgba(255,255,255,.1);
+}
+.view-form .group input[data-type="password"]{
+	text-security:circle;
+	-webkit-text-security:circle;
+}
+.view-form .group .label{
+	color:#aaa;
+	font-size:12px;
+}
+.view-form .group .button{
+	background:#1161ee;
+}
+.view-form .group label .icon{
+	width:15px;
+	height:15px;
+	border-radius:2px;
+	position:relative;
+	display:inline-block;
+	background:rgba(255,255,255,.1);
+}
+.view-form .group label .icon:before,
+.view-form .group label .icon:after{
+	content:'';
+	width:10px;
+	height:2px;
+	background:#fff;
+	position:absolute;
+	transition:all .2s ease-in-out 0s;
+}
+.view-form .group label .icon:before{
+	left:3px;
+	width:5px;
+	bottom:6px;
+	transform:scale(0) rotate(0);
+}
+.view-form .group label .icon:after{
+	top:6px;
+	right:0;
+	transform:scale(0) rotate(0);
+}
+.view-form .group .check:checked + label{
+	color:#fff;
+}
+.view-form .group .check:checked + label .icon{
+	background:#1161ee;
+}
+.view-form .group .check:checked + label .icon:before{
+	transform:scale(1) rotate(45deg);
+}
+.view-form .group .check:checked + label .icon:after{
+	transform:scale(1) rotate(-45deg);
+}
+.view-html .choose-view:checked + .tab + .new-view + .tab + .view-form .choose-view-htm{
+	transform:rotate(0);
+}
+.view-html .new-view:checked + .tab + .view-form .new-view-htm{
+	transform:rotate(0);
+}
+
+.foot-lnk{
+	text-align:center;
+}
+.vent-mode-box-group {
+    display: none;
+}
+hr {
+    margin-top: .1em;
+    margin-bottom: .1em;
+}
+{% endblock %}
+{% block content %}
+<div class="view-wrap">
+	<div class="view-html">
+
+		<input id="tab-1" type="radio" name="tab" class="choose-view" checked><label for="tab-1" class="tab">Choose View</label>
+		<input id="tab-2" type="radio" name="tab" class="new-view"><label for="tab-2" class="tab">New View</label>
+
+		<div class="view-form">
+
+			<div class="choose-view-htm">
+                <form id="viewing" action="" method="POST" enctype="multipart/form-data">
+                    {{ form.options(class_="form-control", style="width: 32%;") }}
+                    <input type="submit" value="Go">
+                </form>
+                {% if existing_view['viewname'] != None %}
+                <hr>
+                <div class='metadata-form-group'>
+                    <div>
+                        <label>Metadata Options</label>
+                    </div>
+                    {% for item in existing_view['metadata'] %}
+                    <div class='metadata-option'>
+                        <label>{{ item }}</label>
+                    </div>
+                    {% endfor %}
+                </div>
+                <hr>
+                <div class='annos-form-group'>
+                    <div>
+                        <label>Annotation Options</label>
+                    </div>
+                    {% for item in existing_view['annos'] %}
+                    <div class='annos-option'>
+                        <label>{{ item }}</label>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+			</div>
+
+            <div class="new-view-htm">
+               <form>
+                  <div class='data-form-group'>
+                    <label for='view-select'>Data Type</label>
+                    <div class="btn-group btn-group-toggle" data-toggle="buttons" id='view-select'>
+                      <label class="btn btn-secondary" for="pva-view" onclick='showAnnos("pva-box-group", "vent-mode-box-group")'>
+                        <input type="radio" name="pva-annos" id="pva-view"> PVA
+                      </label>
+                      <label class="btn btn-secondary" for='vent-mode-view' onclick='showAnnos("vent-mode-box-group", "pva-box-group")'>
+                        <input type="radio" name="vm-annos" id="vent-mode-view"> Vent Mode
+                      </label>
+                    </div>
+                  </div>
+                  <hr>
+                  <div class='metadata-form-group'>
+                      <div>
+                        <label>Metadata Options</label>
+                      </div>
+                      <div class='metadata-option'>
+                        <input class='metadata-check-input' type='checkbox' name='TVe' value='true'>
+                        <label>Tidal Volume Air Exhaled (TVe)</label>
+                      </div>
+                      <div class='metadata-option'>
+                        <input class='metadata-check-input' type='checkbox' name='TVi' value='true'>
+                        <label>Tidal Volume Air Inhaled (TVi)</label>
+                      </div>
+                      <div class='metadata-option'>
+                        <input class='metadata-check-input' type='checkbox' value='true' name='TVe/TVi'>
+                        <label>Ratio of TVe and TVi (TVe/TVi)</label>
+                      </div>
+                      <div class='metadata-option'>
+                        <input class='metadata-check-input' type='checkbox' value='true' name='Previous-PEEP'>
+                        <label>PEEP on Previous Breath (Previous-PEEP)</label>
+                      </div>
+                      <div class='metadata-option'>
+                        <input class='metadata-check-input' type='checkbox' value='true' name='PEEP'>
+                        <label>Positive End Expiratory Pressure (PEEP)</label>
+                      </div>
+                      <div class='metadata-option'>
+                        <input class='metadata-check-input' type='checkbox' value='true' name='Min-Pressure'>
+                        <label>Minimum Pressure on Inspiration (Min-Pressure)</label>
+                      </div>
+                      <div class='metadata-option'>
+                        <input class='metadata-check-input' type='checkbox' value='true' name='I-time'>
+                        <label>Inspiratory Time (I-time)</label>
+                      </div>
+                      <div class='metadata-option'>
+                        <input class='metadata-check-input' type='checkbox' value='true' name='E-time'>
+                        <label>Expiratory Time (E-time)</label>
+                      </div>
+                  </div>
+                  <hr>
+                  <div class='annos-form-group'>
+                    <div>
+                        <label>Annotation Options</label>
+                    </div>
+                    <div class='vent-mode-box-group'>
+                      <div class='vent-mode-form-group'>
+                        <input class='vent-mode-check-input' type='checkbox' value='true' name='vc'>
+                        <label>Volume Control (vc)</label>
+                      </div>
+                      <div class='vent-mode-form-group'>
+                        <input class='vent-mode-check-input' type='checkbox' value='true' name='pc'>
+                        <label>Pressure Control (pc)</label>
+                      </div>
+                      <div class='vent-mode-form-group'>
+                        <input class='vent-mode-check-input' type='checkbox' value='true' name='prvc'>
+                        <label>Pressure Regulated Voluem Control (prvc)</label>
+                      </div>
+                      <div class='vent-mode-form-group'>
+                        <input class='vent-mode-check-input' type='checkbox' value='true' name='ps'>
+                        <label>Pressure Support (ps)</label>
+                      </div>
+                      <div class='vent-mode-form-group'>
+                        <input class='vent-mode-check-input' type='checkbox' value='true' name='simv'>
+                        <label>Synchronized Intermittent Mechanical Ventilation (simv)</label>
+                      </div>
+                      <div class='vent-mode-form-group'>
+                        <input class='vent-mode-check-input' type='checkbox' value='true' name='pav'>
+                        <label>Proportional Assist Ventilation (pav)</label>
+                      </div>
+                      <div class='vent-mode-form-group'>
+                        <input class='vent-mode-check-input' type='checkbox' value='true' name='vs'>
+                        <label>Volume Support (vs)</label>
+                      </div>
+                      <div class='vent-mode-form-group'>
+                        <input class='vent-mode-check-input' type='checkbox' value='true' name='cpap_sbt'>
+                        <label>Continuous Positive Airway Pressure (cpap_sbt)</label>
+                      </div>
+                      <div class='vent-mode-form-group'>
+                        <input class='vent-mode-check-input' type='checkbox' value='true' name='aprv'>
+                        <label>Airway Pressure Release Ventilation (aprv)</label>
+                      </div>
+                      <div class='vent-mode-form-group'>
+                        <input class='vent-mode-check-input' type='checkbox' value='true' name='other'>
+                        <label>Other</label>
+                      </div>
+                    </div>
+
+                    <div class='pva-box-group'>
+                      <div class='pva-form-group'>
+                        <input class='pva-check-input' type='checkbox' value='true' name='fa'>
+                        <label>Flow Asynchrony (fa)</label>
+                      </div>
+                      <div class='pva-form-group'>
+                        <input class='pva-check-input' type='checkbox' value='true' name='dbl'>
+                        <label>Double Trigger (dbl)</label>
+                      </div>
+                      <div class='pva-form-group'>
+                        <input class='pva-check-input' type='checkbox' value='true' name='bs'>
+                        <label>Breath Stacking (bs)</label>
+                      </div>
+                      <div class='pva-form-group'>
+                        <input class='pva-check-input' type='checkbox' value='true' name='aNOS'>
+                        <label>Asynchrony Not Otherwise Specified (aNOS)</label>
+                      </div>
+                      <div class='pva-form-group'>
+                        <input class='pva-check-input' type='checkbox' value='true' name='co'>
+                        <label>Cough (co)</label>
+                      </div>
+                      <div class='pva-form-group'>
+                        <input class='pva-check-input' type='checkbox' value='true' name='su'>
+                        <label>Suction (su)</label>
+                      </div>
+                      <div class='pva-form-group'>
+                        <input class='pva-check-input' type='checkbox' value='true' name='mt'>
+                        <label>Multi Trigger (mt)</label>
+                      </div>
+                      <div class='pva-form-group'>
+                        <input class='pva-check-input' type='checkbox' value='true' name='wNOS'>
+                        <label>Artifact Not Otherwise Specified (wNOS)</label>
+                      </div>
+                    </div>
+                  </div>
+                  <div class='view-name-group'>
+                    <input id='viewname' name='viewname' placeholder='View Name' type='text' value>
+                    <input type='submit' value='Save View'>
+                  </div>
+                </form>
+			</div>
+
+		</div>
+	</div>
+</div>
+
+<script>
+function showAnnos(group_to_show, group_to_hide) {
+    div = document.getElementsByClassName(group_to_show)[0];
+    div.style.display = 'block';
+    div = document.getElementsByClassName(group_to_hide)[0];
+    div.style.display = 'none';
+    // deselect all checkboxes from hidden group
+    inputs = div.getElementsByTagName('input');
+    for (var i=0; i < inputs.length; i++) {
+        if (inputs[i].type == 'checkbox') {
+            inputs[i].checked = false;
+        }
+    }
+}
+</script>
+{% endblock %}

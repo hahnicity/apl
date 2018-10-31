@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<form action="" method="POST" enctype="multipart/form-data">
+    <div class='form-group'>
+        <label for='anno_file'>Ventilator Waveform Data File</label>
+        {{ form.ufile }}
+    </div>
+    <input type="submit" id="submitb" value="Go">
+</form>
+{% endblock %}

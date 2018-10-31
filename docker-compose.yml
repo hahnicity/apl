@@ -1,0 +1,21 @@
+version: '3'
+services:
+  web:
+    build: .
+    ports:
+      - "80:80"
+    volumes:
+      - .:/static/data/
+    networks:
+      apl_nw:
+        aliases:
+          - apl-main
+  redis:
+    image: 'redis:alpine'
+    networks:
+      apl_nw:
+        aliases:
+          - apl-redis
+
+networks:
+  apl_nw:
