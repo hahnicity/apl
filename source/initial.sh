@@ -26,12 +26,12 @@ v=$(awk -F',' '{print NF; exit}' $TMP_FILE)
 echo $v
 if [ "$v" -eq 3 ] || [ "$v" -eq 1 ] || [ "$v" -eq 2 ]
 then
-    python TV2.py $TMP_FILE
+    python extract_breath_meta.py $TMP_FILE
     python timeappend.py 1 $TMP_FILE
 # if there are four columns, use absolute time
 elif [ "$v" -eq 4 ]
 then
-    python TV2.py $TMP_FILE
+    python extract_breath_meta.py $TMP_FILE
     python timeappend.py 2 $TMP_FILE
 fi
 ./filetrunc.sh $v $TMP_FILE
