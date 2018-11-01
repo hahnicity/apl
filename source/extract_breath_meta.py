@@ -44,9 +44,12 @@ def main():
             meta = get_production_breath_meta(breath)
 
             # set datetime format
-            desired_format = "%Y-%m-%d %H:%M:%S.%f"
-            as_dt = datetime.strptime(breath['ts'][0], "%Y-%m-%d %H-%M-%S.%f")
-            abs_bs_time = as_dt.strftime(desired_format)
+            if len(breath['ts']) != 0:
+                desired_format = "%Y-%m-%d %H:%M:%S.%f"
+                as_dt = datetime.strptime(breath['ts'][0], "%Y-%m-%d %H-%M-%S.%f")
+                abs_bs_time = as_dt.strftime(desired_format)
+            else:
+                abs_bs_time = ""
             # meta 9 is tvi, meta 10 is tve, meta 6 is iTime, 7 is eTime
             # 35 is min pressure, 17 is peep,
             aptv_writer.writerow([
