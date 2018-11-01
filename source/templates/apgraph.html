@@ -4,6 +4,8 @@
 {{ super() }}
     <script src="/static/js/dygraph-interaction.js"></script>
     <script src="/static/js/dygraph-combined.js"></script>
+    <link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap2-toggle.min.css" rel="stylesheet">
+    <script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap2-toggle.min.js"></script>
 {% endblock %}
 {% block style %}
 {{ super() }}
@@ -39,11 +41,12 @@
         float: left;
         margin-right: 5%;
     }
-    .multi-anno-toolbar {
-        float: right;
-    }
     .metadata-attr {
         padding-right: 5px;
+    }
+    .toggle {
+        width: 64px !important;
+        height: 33px !important;
     }
     #div1 div div.norm-ts-anno {
         z-index: 2 !important;
@@ -63,30 +66,46 @@
     }
 {% endblock %}
 {% block content %}
+
     <div class="filename-container">file is {{filename|basename}}</div>
     <div class="graph-container">
         <div id="div1" class="graph"></div>
     </div>
     <br>
-        <div class="time-form">
-            <form id="breaths" method="post" action="anno_output/{{filename|basename}}" enctype="multipart/form-data">
-                {{ form.starttime }}
-                {{ form.endtime }}
-                <input type="submit" value="Export Annotations">
-            </form>
-        </div>
-        <iframe id="download" width="1" height="1" style="display:none"></iframe>
-        <iframe id="tv" width="1" height="1" style="display:none"></iframe>
-<script>
+    <div class="time-form">
+        <form id="breaths" method="post" action="anno_output/{{filename|basename}}" enctype="multipart/form-data">
+            {{ form.starttime }}
+            {{ form.endtime }}
+            <input type="submit" value="Export Annotations">
+        </form>
+    </div>
+    <label>
+        Multi-Breath Annotation <input id='multi-anno-slider' type="checkbox" data-toggle="toggle">
+    </label>
+    <iframe id="download" width="1" height="1" style="display:none"></iframe>
+    <iframe id="tv" width="1" height="1" style="display:none"></iframe>
 
+<script>
 var basefile = "{{ filename|safe|basename }};
 var savedAnnos = {{ saved_annotations|safe }}
 var annosToUse = {{ annos_to_perform|safe }}
+var performMultiAnnos = false;
 var multiAnnosTable = annosToUse.reduce(function(obj, x) {
     obj[x] = new Set([]);
     return obj;
 }, {});
 var multiAnnosState = {'lastBN': null, 'lastAnno': null};
+
+$(function() {
+    $('#multi-anno-slider').change(function() {
+        if (document.getElementById('multi-anno-slider').checked) {
+            performMultiAnnos = true;
+        } else {
+            performMultiAnnos = false;
+        }
+        redoAnnoBoxes();
+    })
+})
 
 function setAnnoBasic(tr, anno) {
     var td = document.createElement('td');
@@ -268,11 +287,11 @@ function setAnnos(table, bn, cached_annos) {
         var id = bn + "-" + async;
         checkbox.id = id
         checkbox.setAttribute("bn", bn);
-        {% if anno_type == 'pva' %}
-        checkbox.setAttribute("onclick", "setUnsetSingleAnno('" + id + "')");
-        {% elif anno_type == 'ventmode' %}
-        checkbox.setAttribute("onclick", "setUnsetMultiAnnos('" + id + "')");
-        {% endif %}
+        if (performMultiAnnos) {
+            checkbox.setAttribute("onclick", "setUnsetMultiAnnos('" + id + "')");
+        } else {
+            checkbox.setAttribute("onclick", "setUnsetSingleAnno('" + id + "')");
+        }
         if (cached_annos.includes(id)) { checkbox.checked = true; }
     }
 }
@@ -298,17 +317,18 @@ function drawCallbackFunc(gs) {
             endBN = bn;
         }
     }
-    {% if anno_type == "pva" %}
-    var cached_annos = savedAnnos;
-    {% elif anno_type == "ventmode" %}
-    var cached_annos = [];
-    for (key in multiAnnosTable) {
-        var bns = Array.from(multiAnnosTable[key]);
-        for (var i=0; i < bns.length; i++) {
-            cached_annos.push(bns[i].toString() + "-" + key);
+
+    if (performMultiAnnos) {
+        var cached_annos = [];
+        for (key in multiAnnosTable) {
+            var bns = Array.from(multiAnnosTable[key]);
+            for (var i=0; i < bns.length; i++) {
+                cached_annos.push(bns[i].toString() + "-" + key);
+            }
         }
+    } else {
+        var cached_annos = savedAnnos;
     }
-    {% endif %}
 
     for (var i=0; i < annotations.length; i++) {
         var anno = annotations[i];
@@ -338,6 +358,32 @@ function drawCallbackFunc(gs) {
             val.innerText = bnMetadata[jsonField];
         }
         anno.appendChild(menu);
+    }
+}
+
+function redoAnnoBoxes() {
+    /*
+     * For any table that has currently been rendered redo its annotation checkbox logic
+     * This is currently done to toggle between single and multi annotations
+     */
+    if (performMultiAnnos) {
+        var cached_annos = [];
+        for (key in multiAnnosTable) {
+            var bns = Array.from(multiAnnosTable[key]);
+            for (var i=0; i < bns.length; i++) {
+                cached_annos.push(bns[i].toString() + "-" + key);
+            }
+        }
+    } else {
+        var cached_annos = savedAnnos;
+    }
+
+    var breaths = document.getElementsByClassName("anno-btn dropdown-toggle");
+    for (var i=0; i < breaths.length; i++) {
+        var breath = breaths[i];
+        var bn = breath.innerHTML;
+        var annoTable = breath.parentElement.getElementsByClassName("anno-table")[0];
+        setAnnos(annoTable, bn, cached_annos);
     }
 }
 

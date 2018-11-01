@@ -98,7 +98,7 @@ def create_mapped_diff(diff_annos):
     return mapped_annos
 
 
-def trunc(username, reader_filename, start, end, view):
+def trunc(username, reader_filename, start, end, view_dict):
     base = basename(reader_filename)
     base = splitext(base)[0]
     annos_file = StringIO()
@@ -108,12 +108,12 @@ def trunc(username, reader_filename, start, end, view):
     tvfile = '_'.join(tvfile)
     tvfile = tvfile + "_atv.csv"
     tvfile = join(aptv_output_path, tvfile)
-
+    anno_type = view_dict['anno_type']
 
     with open(tvfile, 'r') as aptv_file:
         aptv_reader = csv.reader(aptv_file, delimiter=',')
         writer = csv.writer(annos_file, delimiter=',')
-        anno_keys = view_anno_mapping[view]['output_ordering']
+        anno_keys = view_anno_mapping[anno_type]['output_ordering']
         writer.writerow(["BN", "vent BN", "rel time",
                          "abs time", "TVi", "e-time", "i-time",
                          "TVe", "TVe/TVi ratio",
@@ -137,7 +137,7 @@ def trunc(username, reader_filename, start, end, view):
                 "There is no annotation data to use. Please check the source file "
                 "to ensure it is properly formatted."
             )
-        saved_annotations = cache.smembers('apl_user_{}_file_{}_view_{}'.format(username, reader_filename, view))
+        saved_annotations = cache.smembers('apl_user_{}_file_{}_view_{}'.format(username, reader_filename, view_dict['viewname']))
         mapped_annotations = create_mapped_diff(saved_annotations)
         for tv_data in tvd:
             # We need to ensure that all empty tv_datas are filled with 0's.
@@ -347,7 +347,6 @@ def anno_output(filename):
     if "apl_username" not in request.cookies:
         return redirect(url_for('login', _external=True))
     username = request.cookies['apl_username']
-    check_for_view(username)
     settings = cache.hgetall('apl_user_{}'.format(username))
     form = OutputAnnotationsForm(csrf_enabled=False)
     starttime = form.starttime.data if form.starttime.data else 1
@@ -359,7 +358,7 @@ def anno_output(filename):
         return err.args[0], 400
     res = anno_file.read()
     response = make_response(res)
-    response.headers["Content-Disposition"] = "attachment; filename={}-{}-output.csv".format(splitext(filename)[0], view_anno_mapping[view]['short_name'])
+    response.headers["Content-Disposition"] = "attachment; filename={}-{}-output.csv".format(splitext(filename)[0], view_anno_mapping[view['anno_type']]['short_name'])
     response.headers['Content-Type'] = 'text/csv'
     return response
 
