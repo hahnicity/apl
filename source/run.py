@@ -13,22 +13,20 @@ import subprocess
 import sys
 import time
 
-from flask import (
-    make_response,
-    render_template,
-    Flask,
-    url_for,
-    redirect,
-    request
-)
+from flask import make_response, render_template, Flask, url_for, redirect, request
 import pandas as pd
 import redis
 from werkzeug import secure_filename
 
 from forms import *
+import defaults
 
 app = Flask(__name__)
-app.config.from_pyfile('config.py')
+app.config.from_object(defaults)
+try:
+    app.config.from_pyfile('config.py', silent=True)
+except IOError:  # If it's not there we're probably running a development server
+    pass
 
 cache = redis.StrictRedis(**app.config['REDIS'])
 aptv_output_path = join(dirname(__file__), app.config['APTV_OUTPUT_DIR'])

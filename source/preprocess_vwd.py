@@ -14,7 +14,7 @@ from os.path import basename, splitext
 
 from ventmap.raw_utils import extract_raw
 
-import config
+import defaults as config
 
 
 def main():

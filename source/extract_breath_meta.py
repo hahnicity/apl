@@ -10,15 +10,14 @@ into a separate file that can be consumed by flask at execution.
 import argparse
 import csv
 import os
-from datetime import datetime, timedelta
-from os.path import abspath, basename, dirname, splitext
+from datetime import datetime
+from os.path import basename, dirname, splitext
 import time
 
 from ventmap.breath_meta import get_production_breath_meta
 from ventmap.raw_utils import extract_raw
-from ventmap.SAM import findx0
 
-import config
+import defaults as config
 
 
 def main():
