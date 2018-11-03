@@ -40,3 +40,70 @@ CLI
     docker-compose up
 
 ## Usage
+Usage of APL is designed to be as simple as possible to untrained users.
+
+### Sign-In / Sign-Up
+Sign-In is accomplished by entering a username, while sign-up is done by entering a username and an email address.
+We currently have not implemented password protection mechanisms because we haven't
+found a need for it yet, but if multi-center users desire to use the same APL instance
+then password protection will undoubtedly be necessary.
+![](images/sign-in.png)
+![](images/sign-up.png)
+
+### Annotation Views
+Normally users can just choose an annotation view. After choosing a view a list of
+metadata and annotation options will be displayed to ensure the correct view has
+been chosen. Users can also create a new annotation view if they desire to as well.
+New annotation views will be marked with a username to ensure proper attribution is
+made.
+
+![](images/choose-view.png)
+![](images/creating-new-views.png)
+
+### Upload and Choosing a File
+
+Upload occurs using files collected from the Puritan Bennet 840 ventilator. The
+files are then analyzed with the ventmap software and processed into a form that
+is able to be rendered by APL. Files can then be chosen via drop-down menu.
+
+![](images/upload-annotation-file.png)
+![](images/choose-annotation-file.png)
+
+### Annotating a File
+
+Annotating a file can begin after a view and a file are chosen to annotate. Annotation
+occurs simply by clicking on a breath number and by clicking a checkbox associated
+with a breath annotation. Breaths that are not annotated are assumed to be normal.
+If multiple breaths at once are desired to be annotated then a user simply picks
+a breath to start annotations at, and then selects a breath to end annotations, and
+all intermediate breaths will be automatically annotated. Annotations can be exported to CSV
+format by clicking a button at the bottom left of the annotation screen. There is
+also option for output of a specific breath range of annotations as well.
+
+![](images/annotation-graph.png)
+![](images/single-breath-anno.png)
+![](images/begin-multi-breath-annotation.png)
+![](images/first-multi-breath-annotation.png)
+![](images/second-multi-breath-annotation.png)
+![](images/export-annotation-range.png)
+
+### Reconciliation
+
+Assuming that another reviewer has annotated the same file you are working on, in the
+same view then you can select the file you want to reconcile and the name of the
+reviewer you want to reconcile against. If there are no breaths that need to be reconciled then all breaths will have a green checkmark above them. If breaths need to be reconciled, then breaths will appear with a red label above them, marking the
+differing choices each reviewer made when annotating them. Importantly, breaths needing reconciliation will have differing annotations be unchecked, allowing for
+tabula rasa of choice.
+
+![](images/reconciliation-choice.png)
+![](images/reconciliation-all-green.png)
+![](images/reconciliation-differences.png)
+![](images/reconciliation-tabula-rasa.png)
+
+### Deleting Files
+
+If files need to be deleted from APL to clear space then that is possible via the
+`Delete` Tab. Here users have option of deleting single files, or all files if
+space needs to be quickly found.
+
+![](images/delete-files.png)
