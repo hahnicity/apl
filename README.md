@@ -3,8 +3,9 @@
 ## Installation
 
 ### For Development Server
-Running a development server for APL is not difficult, but you will need Redis installed
-on your machine before you attempt to run these instructions:
+APL was developed with Python2.7. If you do not have a Python2.7 environment you can set one
+up using anaconda or virtualenv. Running a development server for APL is not difficult,
+but you will need Redis installed on your machine before you attempt to run these instructions:
 
     cd source
     pip install -r requirements.txt
