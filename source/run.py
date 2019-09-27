@@ -166,12 +166,13 @@ def trunc(username, reader_filename, start, end, view_dict):
 def display_graphing(username, filename, anno_file, reviewer_1, reviewer_2, view):
     arr = []
     aptv_arr = []
+    viewname = view['viewname']
     if anno_file:
         anno_file = pd.read_csv(anno_file)
 
     if reviewer_1 and reviewer_2:
-        reviewer_1_annos = cache.smembers('apl_user_{}_file_{}_view_{}'.format(reviewer_1, basename(filename), view['viewname']))
-        reviewer_2_annos = cache.smembers('apl_user_{}_file_{}_view_{}'.format(reviewer_2, basename(filename), view['viewname']))
+        reviewer_1_annos = cache.smembers('apl_user_{}_file_{}_view_{}'.format(reviewer_1, basename(filename), viewname))
+        reviewer_2_annos = cache.smembers('apl_user_{}_file_{}_view_{}'.format(reviewer_2, basename(filename), viewname))
         saved_annotations = list(reviewer_1_annos.intersection(reviewer_2_annos))
         diff_reviewer_1 = reviewer_1_annos.difference(reviewer_2_annos)
         diff_reviewer_2 = reviewer_2_annos.difference(reviewer_1_annos)
@@ -180,7 +181,7 @@ def display_graphing(username, filename, anno_file, reviewer_1, reviewer_2, view
     else:
         reviewer_1 = None
         reviewer_2 = None
-        redis_annos_key = 'apl_user_{}_file_{}_view_{}'.format(username, basename(filename), view['viewname'])
+        redis_annos_key = 'apl_user_{}_file_{}_view_{}'.format(username, basename(filename), viewname)
         saved_annotations = list(cache.smembers(redis_annos_key))
 
     final_filename = '"{}"'.format(filename)
@@ -237,14 +238,15 @@ def display_graphing(username, filename, anno_file, reviewer_1, reviewer_2, view
             # the file and wish to see bs markers
             if tv_ratio != "inf" and tv_ratio < .9 and not isinstance(anno_file, pd.DataFrame) and not reviewer_1:
                 x_mod = {"absolute": 100}.get(timetype, .1)
-#                arr.append({
-#                    "series": "flow",
-#                    "width": 35,
-#                    "height": 24,
-#                    "cssClass": "norm-ts-anno",
-#                    "x": round(round(float(cur_time), 2) + x_mod, 2),
-#                    "shortText": "BS?",
-#                })
+                if viewname == 'pva':
+                    arr.append({
+                        "series": "flow",
+                        "width": 35,
+                        "height": 24,
+                        "cssClass": "norm-ts-anno",
+                        "x": round(round(float(cur_time), 2) + x_mod, 2),
+                        "shortText": "BS?",
+                    })
 
             # This is when we are performing reconciliation
             elif reviewer_1 and reviewer_2:
@@ -300,7 +302,7 @@ def display_graphing(username, filename, anno_file, reviewer_1, reviewer_2, view
     resp = make_response(render_template(
         'apgraph.html', arr=arr, form=form, filename=final_filename,
         file_name=file_name, timetype=timetype, aptv_arr=aptv_arr,
-        saved_annotations=saved_annotations, viewname=view['viewname'],
+        saved_annotations=saved_annotations, viewname=viewname,
         annos_to_perform=view['annos'], anno_type=view['anno_type'],
         metadata_to_use=view['metadata'],
     ))
@@ -500,6 +502,8 @@ def hello():
         return redirect(url_for('login', _external=True))
     username = request.cookies['apl_username']
     settings = cache.hgetall('apl_user_{}'.format(username))
+    if settings == {}:
+        return render_template('login.html')
     view = get_view(settings['view'])
     onlyfiles = [
         f for f in listdir(raw_output_path) if isfile(
