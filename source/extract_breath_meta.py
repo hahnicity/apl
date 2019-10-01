@@ -11,6 +11,7 @@ import argparse
 import csv
 import os
 from datetime import datetime
+from io import open
 from os.path import basename, dirname, splitext
 import time
 
