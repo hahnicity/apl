@@ -1,8 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-SCRIPT=$(readlink -f "$0")
-BASE_DIR=$(dirname "$SCRIPT")
+BASE_DIR=$(dirname "$0")
 FILE=$2
 UPLOAD=$2
 if [[ -z $FILE ]]; then
