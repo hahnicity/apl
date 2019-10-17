@@ -55,6 +55,18 @@ view_anno_mapping = {
         'short_name': 'ventmode',
     },
 }
+vm_view = {
+    'viewname': 'ventmode',
+    'anno_type': 'ventmode',
+    'metadata': metadata,
+    'annos': ventmode_annos
+}
+pva_view = {
+    'viewname': 'pva',
+    'anno_type': 'pva',
+    'metadata': metadata,
+    'annos': ['fa', 'dbl', 'bs', 'aNOS', 'co', 'su', 'mt', 'wNOS']
+}
 
 
 class TVData(object):
@@ -319,13 +331,6 @@ def update_view(username, viewname):
 
 def setup_generic_views():
     if len(cache.smembers('views')) < 2:
-        vm_view = {'viewname': 'ventmode', 'anno_type': 'ventmode', 'metadata': metadata, 'annos': ventmode_annos}
-        pva_view = {
-            'viewname': 'pva',
-            'anno_type': 'pva',
-            'metadata': metadata,
-            'annos': ['fa', 'dbl', 'bs', 'aNOS', 'co', 'su', 'mt', 'wNOS']
-        }
         cache.sadd('views', json.dumps(vm_view))
         cache.sadd('views', json.dumps(pva_view))
 
