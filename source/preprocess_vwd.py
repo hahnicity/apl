@@ -7,7 +7,6 @@ Makes files that are compatible for consumption by dygraphs.
 from __future__ import print_function
 import argparse
 import csv
-from io import open
 import os
 import time
 import datetime

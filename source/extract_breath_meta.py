@@ -11,11 +11,10 @@ import argparse
 import csv
 import os
 from datetime import datetime
-from io import open
 from os.path import basename, dirname, splitext
 import time
 
-from ventmap.breath_meta import get_production_breath_meta
+from ventmap.breath_meta import get_experimental_breath_meta, get_production_breath_meta
 from ventmap.raw_utils import extract_raw
 
 import defaults as config
@@ -42,7 +41,7 @@ def main():
 
         for breath in generator:
             meta = get_production_breath_meta(breath)
-
+            meta_exp = get_experimental_breath_meta(breath)
             # set datetime format
             if len(breath['ts']) != 0:
                 desired_format = "%Y-%m-%d %H:%M:%S.%f"
@@ -52,10 +51,13 @@ def main():
                 abs_bs_time = ""
             # meta 9 is tvi, meta 10 is tve, meta 6 is iTime, 7 is eTime
             # 35 is min pressure, 17 is peep,
+            fbit = meta[6] 
+            pbit = meta_exp[-1]
+            fbit_pbit = fbit/pbit
             aptv_writer.writerow([
                 breath['rel_bn'], round(meta[9], 1), round(meta[10], 1),
                 breath['vent_bn'], round(meta[7], 2), round(meta[6], 2), peep_prev,
-                round(meta[35], 2), round(meta[17], 2), rel_time, abs_bs_time,
+                round(meta[35], 2), round(meta[17], 2), rel_time, abs_bs_time, round(fbit_pbit,2),# //11: add new feature 
             ])
             peep_prev = round(meta[17], 2)
             rel_time = round(rel_time + breath['frame_dur'], 2)

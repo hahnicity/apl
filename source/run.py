@@ -40,7 +40,7 @@ stream_handler = logging.StreamHandler()
 stream_handler.setLevel(logging.WARNING)
 app.logger.addHandler(stream_handler)
 
-metadata = ['TVi', 'TVe', 'TVe/TVi', 'Previous-PEEP', 'PEEP', 'Min-Pressure', 'I-time', 'E-time']
+metadata = ['TVi', 'TVe', 'TVe/TVi', 'Previous-PEEP', 'PEEP', 'Min-Pressure', 'I-time', 'E-time',"fbit/pbit"]
 ventmode_annos = ['vc', 'pc', 'prvc', 'ps', 'simv', 'pav', 'vs', 'cpap_sbt', 'aprv', 'other']
 pva_annos = ['fa', 'dbl', 'bs', 'aNOS', 'co', 'su', 'mt', 'wNOS', 'dtpi', 'dtpa', 'vd']
 view_anno_mapping = {
@@ -207,9 +207,9 @@ def display_graphing(username, filename, anno_file, reviewer_1, reviewer_2, view
                 timetype = "absolute"
                 syntax = "%Y-%m-%d %H:%M:%S.%f"
                 cur_time = time.mktime(
-                    datetime.strptime(aptv_row[-1], syntax).timetuple()
+                    datetime.strptime(aptv_row[10], syntax).timetuple()
                 ) * 1e3 + (
-                    datetime.strptime(aptv_row[-1], syntax).microsecond
+                    datetime.strptime(aptv_row[10], syntax).microsecond
                 ) / 1e3
                 # Compensate for .02 seconds plus some wiggle room
                 cur_time = float(cur_time) + 60
@@ -293,6 +293,8 @@ def display_graphing(username, filename, anno_file, reviewer_1, reviewer_2, view
                 "peep_prev": aptv_row[6],
                 "min_p": aptv_row[7],
                 "peep": aptv_row[8],
+                # xxx add 
+                "fbit_pbit" : aptv_row[11],
             })
 
     timetype = '"{}"'.format(timetype)
