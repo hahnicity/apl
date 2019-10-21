@@ -16,8 +16,12 @@ import time
 
 from ventmap.breath_meta import get_experimental_breath_meta, get_production_breath_meta
 from ventmap.raw_utils import extract_raw
-
+from DCA import cal_slope_dyna,cal_slope_static,median_flow_dyna,find_flat_num,find_flat_df,repeatingNumbers
 import defaults as config
+from sklearn.linear_model import LinearRegression
+from itertools import groupby
+
+
 
 
 def main():
@@ -54,10 +58,29 @@ def main():
             fbit = meta[6] 
             pbit = meta_exp[-1]
             fbit_pbit = fbit/pbit
+            #
+            slope_dyna=cal_slope_dyna(breath)
+
+            slope_static=cal_slope_static(breath)
+            flow_median = median_flow_dyna(breath)
+            #
             aptv_writer.writerow([
-                breath['rel_bn'], round(meta[9], 1), round(meta[10], 1),
-                breath['vent_bn'], round(meta[7], 2), round(meta[6], 2), peep_prev,
-                round(meta[35], 2), round(meta[17], 2), rel_time, abs_bs_time, round(fbit_pbit,2),# //11: add new feature 
+                breath['rel_bn'], 
+                round(meta[9], 1), 
+                round(meta[10], 1),
+                breath['vent_bn'], 
+                round(meta[7], 2), 
+                round(meta[6], 2), 
+                peep_prev,
+                round(meta[35], 2), 
+                round(meta[17], 2), 
+                rel_time, 
+                abs_bs_time, 
+                round(fbit_pbit,2),
+                round(slope_dyna,2),
+                round(slope_static,2),
+                round(flow_median,2),
+                round(pbit,2),# LYJ: add new feature 
             ])
             peep_prev = round(meta[17], 2)
             rel_time = round(rel_time + breath['frame_dur'], 2)
@@ -67,3 +90,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
