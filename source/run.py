@@ -18,6 +18,7 @@ import pandas as pd
 import redis
 from werkzeug import secure_filename
 
+from aptv import APTVFile
 from forms import *
 import defaults
 
@@ -39,15 +40,20 @@ onlyfiles = [f for f in listdir(raw_output_path) if isfile(join(raw_output_path,
 stream_handler = logging.StreamHandler()
 stream_handler.setLevel(logging.WARNING)
 app.logger.addHandler(stream_handler)
-#LYJ add
-metadata = ['TVi', 'TVe', 'TVe/TVi', 'Previous-PEEP', 'PEEP', 'Min-Pressure', 'I-time', 'E-time',"fbit/pbit","D_Slope",'S_Slope','flow_median','pbit']
+
+# This variable defines order that items are displayed on HTML popups
+metadata = ['TVi', 'TVe', 'TVe/TVi', 'Prev-PEEP', 'PEEP', 'Min-Pressure', 'I-time', 'E-time', 'PBit', "FBit/PBit", "Dyn-Slope", 'Static-Slope', 'Median-Flow']
+
+# This variable defines annotations available for ventilator mode
 ventmode_annos = ['vc', 'pc', 'prvc', 'ps', 'simv', 'pav', 'vs', 'cpap_sbt', 'aprv', 'other']
-#LYJ DCA
-pva_annos = ['fa', 'dbl', 'bs', 'aNOS', 'co', 'su', 'mt', 'wNOS', 'dtpi', 'dtpa', 'vd','D_DCA','S_DCA']
+
+# This variable defines annotations available for PVA
+pva_annos = ['fa', 'dbl', 'bs', 'aNOS', 'co', 'su', 'mt', 'wNOS', 'dtpi', 'dtpa', 'vd','d_dca','s_dca']
+
 view_anno_mapping = {
     'pva': {
         'graphical_ordering': pva_annos,
-        'output_ordering': ["dbl", "mt", "bs", "dtpi", "dtpa", "fa", "co", "su", "vd", "aNOS", "wNOS",'D_DCA','S_DCA'],
+        'output_ordering': ["dbl", "mt", "bs", "dtpi", "dtpa", "fa", "co", "su", "vd", "aNOS", "wNOS",'d_dca','s_dca'],
         'short_name': 'pva',
     },
     'ventmode': {
@@ -66,23 +72,8 @@ pva_view = {
     'viewname': 'pva',
     'anno_type': 'pva',
     'metadata': metadata,
-    'annos': ['fa', 'dbl', 'bs', 'aNOS', 'co', 'su', 'mt', 'wNOS','D_DCA','S_DCA']
+    'annos': ['fa', 'dbl', 'bs', 'aNOS', 'co', 'su', 'mt', 'wNOS','d_dca','s_dca']
 }
-
-
-class TVData(object):
-    def __init__(self, b, tvi, tve, vent_bn, e_time, i_time, peep_prev='N/A', min_p='N/A', peep='N/A', rel_bs="", abs_bs=""):
-        self.b = b
-        self.tvi = tvi
-        self.tve = tve
-        self.vent_bn = vent_bn
-        self.e_time = e_time
-        self.peep = peep
-        self.peep_prev = peep_prev
-        self.min_p = min_p
-        self.rel_bs = rel_bs
-        self.abs_bs = abs_bs
-        self.i_time = i_time
 
 
 @app.template_filter("basename")
@@ -113,65 +104,30 @@ def trunc(username, reader_filename, start, end, view_dict):
     base = basename(reader_filename)
     base = splitext(base)[0]
     annos_file = StringIO()
-
-    tvfile = basename(reader_filename)
-    tvfile = splitext(tvfile)[0].split('_')[:-1]
-    tvfile = '_'.join(tvfile)
-    tvfile = tvfile + "_atv.csv"
-    tvfile = join(aptv_output_path, tvfile)
     anno_type = view_dict['anno_type']
+    aptv = APTVFile(reader_filename, True)
+    tvd = aptv.read_aptv_file(start, end)
 
-    with open(tvfile, 'r') as aptv_file:
-        aptv_reader = csv.reader(aptv_file, delimiter=',')
-        writer = csv.writer(annos_file, delimiter=',')
-        anno_keys = view_anno_mapping[anno_type]['output_ordering']
-        writer.writerow(["BN", "vent BN", "rel time",
-                         "abs time", "TVi", "e-time", "i-time",
-                         "TVe", "TVe/TVi ratio",
-                         "PEEP-prev", "minP", "PEEP"] + anno_keys)
-        app.logger.info("Attempt to get breath range file")
+    writer = csv.writer(annos_file, delimiter=',')
+    anno_keys = view_anno_mapping[anno_type]['output_ordering']
+    writer.writerow(aptv.columns + anno_keys)
 
-        # Reduce memory imprint of this function by only picking the rows we want
-        start_offset, end_offset = 0, 0
-        tvd = []
+    app.logger.info("Attempt to get breath range file")
 
-        for idx, row in enumerate(aptv_reader):
-            if row[0] == start:
-                start_offset = idx
-            elif row[0] == end:
-                end_offset = idx
-            if int(start) <= int(row[0]) <= int(end):
-                tvd.append(TVData(*row))
+    saved_annotations = cache.smembers('apl_user_{}_file_{}_view_{}'.format(username, reader_filename, view_dict['viewname']))
+    mapped_annotations = create_mapped_diff(saved_annotations)
 
-        if not tvd:
-            raise NoAnnotationDataError(
-                "There is no annotation data to use. Please check the source file "
-                "to ensure it is properly formatted."
-            )
-        saved_annotations = cache.smembers('apl_user_{}_file_{}_view_{}'.format(username, reader_filename, view_dict['viewname']))
-        mapped_annotations = create_mapped_diff(saved_annotations)
-        for tv_data in tvd:
-            # We need to ensure that all empty tv_datas are filled with 0's.
-            # Second we need to ensure that things are rounded correctly.
-            # tvi/tve need to be rounded up/down to the nearest int. the
-            # tvi/tve ratio needs to be 2 decimal places.
-            tvi = round(float(tv_data.tvi))
-            tve = round(abs(float(tv_data.tve)))
-            try:
-                ratio = round(abs(float(tve / tvi)), 2)
-            except ZeroDivisionError:
-                ratio = 'inf'
-            anno_vals = [0] * len(anno_keys)
-            for i in range(len(anno_keys)):
-                if int(tv_data.b) in mapped_annotations and anno_keys[i] in mapped_annotations[int(tv_data.b)]:
-                    anno_vals[i] = 1
-            app.logger.debug("Iterate BN {}".format(tv_data.b))
-            writer.writerow([
-                int(tv_data.b), int(tv_data.vent_bn), tv_data.rel_bs,
-                tv_data.abs_bs, tvi, float(tv_data.e_time),
-                float(tv_data.i_time), tve, ratio,
-                tv_data.peep_prev, tv_data.min_p, tv_data.peep,
-            ] + anno_vals)
+    for tv_row in tvd:
+        # We need to ensure that all empty tv_datas are filled with 0's.
+        # Second we need to ensure that things are rounded correctly.
+        # tvi/tve need to be rounded up/down to the nearest int. the
+        # tvi/tve ratio needs to be 2 decimal places.
+        anno_vals = [0] * len(anno_keys)
+        bn = int(tv_row[0])
+        for i in range(len(anno_keys)):
+            if bn in mapped_annotations and anno_keys[i] in mapped_annotations[bn]:
+                anno_vals[i] = 1
+        writer.writerow(tv_row + anno_vals)
     annos_file.seek(0)
     return annos_file
 
@@ -214,20 +170,22 @@ def display_graphing(username, filename, anno_file, reviewer_1, reviewer_2, view
         except:
             return "File is empty.", 404
         aptv_reader = csv.reader(aptv_f)
+        # XXX eventually transfer all this logic to aptv class
+        col_to_idx_map = APTVFile.get_columns_idxs()
         for aptv_row in aptv_reader:
             # Ensures we zoom on the correct breath starting out.
-            if aptv_row[-1]:
+            if aptv_row[col_to_idx_map['abs_bs']]:
                 timetype = "absolute"
                 syntax = "%Y-%m-%d %H:%M:%S.%f"
                 cur_time = time.mktime(
-                    datetime.strptime(aptv_row[10], syntax).timetuple()
+                    datetime.strptime(aptv_row[col_to_idx_map['abs_bs']], syntax).timetuple()
                 ) * 1e3 + (
-                    datetime.strptime(aptv_row[10], syntax).microsecond
+                    datetime.strptime(aptv_row[col_to_idx_map['abs_bs']], syntax).microsecond
                 ) / 1e3
                 # Compensate for .02 seconds plus some wiggle room
                 cur_time = float(cur_time) + 60
             else:
-                cur_time = aptv_row[-2]
+                cur_time = aptv_row[col_to_idx_map['rel_bs']]
             if float(cur_time) < x_start:
                 continue
             bn = aptv_row[0]
@@ -242,10 +200,7 @@ def display_graphing(username, filename, anno_file, reviewer_1, reviewer_2, view
                 # dygraphs won't perform annotations
                 "x": round(float(cur_time), 2),
             })
-            try:
-                tv_ratio = abs(round(float(aptv_row[2]) / float(aptv_row[1]), 2))
-            except ZeroDivisionError:
-                tv_ratio = "inf"
+            tv_ratio = aptv_row[col_to_idx_map['tv_ratio']]
 
             # In this case we are covering the time where we are annotating
             # the file and wish to see bs markers
@@ -297,22 +252,7 @@ def display_graphing(username, filename, anno_file, reviewer_1, reviewer_2, view
                         "icon": 'static/images/checkmark.png',
                     })
 
-            aptv_arr.append({
-                "tvi": aptv_row[1],
-                "tve": aptv_row[2],
-                "tv_ratio": tv_ratio,
-                "e_time": aptv_row[4],
-                "i_time": aptv_row[5],
-                "peep_prev": aptv_row[6],
-                "min_p": aptv_row[7],
-                "peep": aptv_row[8],
-                "fbit_pbit" : aptv_row[11], 
-                "slope_dyna": aptv_row[12],
-                "slope_static": aptv_row[13],
-                'flow_median' : aptv_row[14],
-                'pbit' : aptv_row[15],
-                # LYJ add
-            })
+            aptv_arr.append({row: aptv_row[col_to_idx_map[row]] for row in APTVFile.display_rows})
 
     timetype = '"{}"'.format(timetype)
     if not arr or not aptv_arr:

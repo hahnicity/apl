@@ -345,16 +345,15 @@ function drawCallbackFunc(gs) {
             "I-time": "i_time",
             "Min-Pressure": "min_p",
             "PEEP": "peep",
-            "Previous-PEEP": "peep_prev",
+            "Prev-PEEP": "peep_prev",
             "TVe/TVi": "tv_ratio",
             "TVe": "tve",
             "TVi": "tvi",
-            //LYJ add 
-            "fbit/pbit": "fbit_pbit",
-            'D_Slope':'slope_dyna',
-            'S_Slope':'slope_static',
-            'flow_median' : 'flow_median',
-            'pbit' : 'pbit',
+            "PBit" : "pbit",
+            "FBit/PBit": "fbit_pbit",
+            "Dyn-Slope": "slope_dyna",
+            "Static-Slope": "slope_static",
+            "Median-Flow" : "flow_median",
         }
         var vals = metadataTable.getElementsByClassName('metadata-val');
         for (var k=0; k < vals.length; k++) {

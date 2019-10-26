@@ -4,11 +4,13 @@ add new features for DCA detection
 
 
 """
-import statistics
-import pandas as pd
-import numpy as np
-from sklearn.linear_model import LinearRegression
 from itertools import groupby
+
+import numpy as np
+import pandas as pd
+from sklearn.linear_model import LinearRegression
+import statistics
+
 from ventmap.breath_meta import get_experimental_breath_meta, get_production_breath_meta
 
 
@@ -22,7 +24,7 @@ def repeatingNumbers(numList):
             i = i + 1
 
         endIndex = i
-        
+
         df = df.append({'T_F': n, 'startIndex': startIndex, 'endIndex': endIndex, "length":endIndex-startIndex+1}, ignore_index=True)
 
         i = i + 1
@@ -30,7 +32,7 @@ def repeatingNumbers(numList):
 
 
 def find_flat_df(breath):
-    
+
     # FIND THE INTERVAL OF ZERO PHASE, WILL BE NEEDED TO calculate slope
     br_id = breath["rel_bn"]
     #print(br_id)
@@ -44,7 +46,7 @@ def find_flat_df(breath):
     maxid = df_t_flow_pres.flow.idxmax()
     minid = df_t_flow_pres_0.flow.idxmin()
     df_t_flow_pres_0 = df_t_flow_pres_0.loc[maxid:minid]
-    
+
     slopes= np.diff(df_t_flow_pres_0.flow)
 
 
@@ -57,7 +59,7 @@ def find_flat_df(breath):
 
     df_f_s["row_num"] = range(df_f_s.shape[0])
     df_f_s["breath_id"] = df_f_s.index
-    
+
     df_repeat = repeatingNumbers(df_f_s["sat_2"].tolist())
     df_repeat_1=df_repeat[df_repeat.T_F==1]
     if df_repeat_1.empty:
@@ -92,7 +94,7 @@ def find_flat_num(breath):
     # calculate consecutive nubmer of true of false
     grouped_L = [(k, sum(1 for i in g)) for k,g in groupby(L)]
     df=pd.DataFrame(grouped_L, columns=['T_F', 'num'])
-    
+
     flat_num=max(df[df.T_F==1].num) if df[df.T_F==1].num.any() else 0
     return flat_num
 
@@ -102,24 +104,24 @@ def cal_slope_dyna(breath):
     # calculate slope for DCA_0.9 == 1
     meta = get_production_breath_meta(breath)
     meta_exp = get_experimental_breath_meta(breath)
-    fbit = meta[6] 
+    fbit = meta[6]
     pbit = meta_exp[-1]
     f_pbit = fbit/pbit
 
     br_id = breath["rel_bn"]
-   
+
     dt = breath["dt"]
-    
+
     flow = breath["flow"]
     pressure = breath["pressure"]
     rel_time_array = [i * dt for i in range(len(flow))]
     df_t_flow_pres = pd.DataFrame({'t':rel_time_array,'flow':flow,'pressure':pressure})
-    
+
     if f_pbit <= 0.9 :
-        
+
         #fbit=DCA_detect[DCA_detect.breath_id==br_id].fbit.values[0]
         #pbit=DCA_detect[DCA_detect.breath_id==br_id].pbit.values[0]
-        
+
         pressure_slope = df_t_flow_pres[df_t_flow_pres.t.between(fbit,pbit)]
         x = np.array([pressure_slope.t]).reshape((-1, 1))
         y = pressure_slope.pressure
@@ -128,21 +130,21 @@ def cal_slope_dyna(breath):
         slope = model.coef_[0]
 
     else:
-        slope = 0 
+        slope = 0
     return round(slope,2)
 
 def cal_slope_static(breath):
     # calculate slope for flat_num >=7 (potential  static DCA)
     flat_num = find_flat_num(breath)
     br_id = breath["rel_bn"]
-   
+
     dt = breath["dt"]
-    
+
     flow = breath["flow"]
     pressure = breath["pressure"]
     rel_time_array = [i * dt for i in range(len(flow))]
     df_t_flow_pres = pd.DataFrame({'t':rel_time_array,'flow':flow,'pressure':pressure})
-    
+
     if flat_num >=7 :
         target_slope=find_flat_df(breath)
         x = np.array([target_slope.t]).reshape((-1, 1))
@@ -151,7 +153,7 @@ def cal_slope_static(breath):
         model.fit(x, y)
         slope = model.coef_[0]
     else:
-        slope = 0 
+        slope = 0
     return round(slope,2)
 
 
@@ -159,19 +161,19 @@ def median_flow_dyna(breath):
     # calculate slope for DCA_0.9 == 1
     meta = get_production_breath_meta(breath)
     meta_exp = get_experimental_breath_meta(breath)
-    fbit = meta[6] 
+    fbit = meta[6]
     pbit = meta_exp[-1]
     f_pbit = fbit/pbit
 
     br_id = breath["rel_bn"]
-   
+
     dt = breath["dt"]
-    
+
     flow = breath["flow"]
     pressure = breath["pressure"]
     rel_time_array = [i * dt for i in range(len(flow))]
     df_t_flow_pres = pd.DataFrame({'t':rel_time_array,'flow':flow,'pressure':pressure})
-    
+
     if f_pbit <= 0.9 :
         pressure_slope = df_t_flow_pres[df_t_flow_pres.t.between(fbit,pbit)]
         #x = np.array([pressure_slope.t]).reshape((-1, 1))
@@ -180,5 +182,5 @@ def median_flow_dyna(breath):
 
 
     else:
-        median_flow = 0 
+        median_flow = 0
     return round(median_flow,2)

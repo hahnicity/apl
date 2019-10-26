@@ -10,8 +10,10 @@ python-dateutil
 pytz
 PyYAML
 redis
+scikit-learn
 scipy
 six
+statistics
 ventmap<1.3
 Werkzeug
 wheel

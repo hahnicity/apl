@@ -10,7 +10,7 @@ TMP_FILE=tmp_processing/`basename $FILE`
 # count how many columns are in the file
 v=$(awk -F',' '{print NF; exit}' $TMP_FILE)
 
-python extract_breath_meta.py $TMP_FILE
+python aptv.py $TMP_FILE
 python preprocess_vwd.py $TMP_FILE
 ./filetrunc.sh $v $TMP_FILE
 rm $TMP_FILE
