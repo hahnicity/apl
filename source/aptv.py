@@ -133,6 +133,8 @@ class APTVFile(object):
                 slope_dyna=cal_slope_dyna(breath)
                 slope_static=cal_slope_static(breath)
                 flow_median = median_flow_dyna(breath)
+                # The only trick is that these columns must match with the ordering
+                # in self.columns
                 vals = [
                     breath['rel_bn'],
                     breath['vent_bn'],
@@ -146,11 +148,11 @@ class APTVFile(object):
                     peep,
                     peep_prev,
                     min_pressure,
+                    round(pbit, 2),
                     round(fbit_pbit, 2),
                     round(slope_dyna, 2),
                     round(slope_static, 2),
                     round(flow_median, 2),
-                    round(pbit, 2),
                 ]
                 if len(vals) != len(self.columns):
                     raise Exception('number of columns does not match number of values trying to be written!')
