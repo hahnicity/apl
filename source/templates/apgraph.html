@@ -202,8 +202,18 @@ function setUnsetSingleAnno(id) {
     var elem = document.getElementById(id);
     var bn = elem.getAttribute("bn")
     var anno = elem.getAttribute("annoType");
-    // XXX update savedAnnos.
-    // XXX Perform retry somehow if fails??
+    if (elem.checked) {
+        console.log('add new elem')
+        savedAnnos.push(bn + '-' + anno);
+    } else {
+        for (var i=0; i < savedAnnos.length; i++) {
+            if (savedAnnos[i] == bn + '-' + anno) {
+                savedAnnos.splice(i, 1);
+                break;
+            }
+        }
+    }
+    // XXX Perform retry or alert somehow if fails??
     if (elem.checked) {
         $.ajax({type: "POST", url: "/update_anno/" + basefile + "/" + bn + "/" + anno + "/true"});
     } else {
