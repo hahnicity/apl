@@ -7,6 +7,8 @@ APL was developed with Python2.7. If you do not have a Python2.7 environment you
 up using anaconda or virtualenv. Running a development server for APL is not difficult,
 but you will need Redis installed on your machine before you attempt to run these instructions:
 
+    conda create -n apl python=2.7
+    conda activate apl
     cd source
     pip install -r requirements.txt
     redis-server &
