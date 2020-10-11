@@ -16,7 +16,10 @@ import time
 from flask import make_response, render_template, Flask, url_for, redirect, request
 import pandas as pd
 import redis
-from werkzeug import secure_filename
+try:
+    from werkzeug import secure_filename
+except ImportError:
+    from werkzeug.utils import secure_filename
 
 from aptv import APTVFile
 from forms import *
